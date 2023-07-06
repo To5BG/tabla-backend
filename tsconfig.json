@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "strict": true,
+    "target": "ES2019",
+    "module": "commonJS",
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2019",
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
