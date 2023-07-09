@@ -9,11 +9,13 @@ docker run \
   --rm \
   -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
   -e POSTGRES_DB=$POSTGRES_DATABASE \
-  -e POSTGRES_USER=$POSTGRES_USER \
+  -e POSTGRES_USER=$POSTGRES_USERNAME \
   -v $DOCKER_VOLUME:/var/lib/postgresql/data \
   -p 5433:5432 \
   -d postgres
 
+# allow time for cont init
 SLEEP 2;
 
-echo "\l" | docker exec -i $DOCKER_CONTAINER psql -U $POSTGRES_USER $POSTGRES_DATABASE
+# sanity-check by listing all databases on this port
+echo "\l" | docker exec -i $DOCKER_CONTAINER psql -U $POSTGRES_USERNAME $POSTGRES_DATABASE
