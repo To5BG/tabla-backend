@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "strict": true,
+    "strictPropertyInitialization": false,
     "target": "ES2019",
     "module": "commonJS",
     "declaration": true,

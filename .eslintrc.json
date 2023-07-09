@@ -10,5 +10,7 @@
     "node": true,
     "jest": true
   },
-  "rules": {}
+  "rules": {
+    "@typescript-eslint/naming-convention": ["error", { "selector": "typeAlias", "format": ["StrictPascalCase"] }]
+  }
 }
