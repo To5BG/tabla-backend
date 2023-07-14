@@ -1,5 +1,8 @@
 import { PrimaryGeneratedColumn, Column, CreateDateColumn, Entity } from 'typeorm';
 
+/**
+ *
+ */
 export enum Status {
   ONLINE = 'online',
   OFFLINE = 'offline',
@@ -7,6 +10,9 @@ export enum Status {
   DDISTURB = 'do-not-disturb'
 }
 
+/**
+ *
+ */
 @Entity('users_table')
 export class User {
   @PrimaryGeneratedColumn('uuid')

@@ -4,6 +4,9 @@ import { AuthService } from './auth.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LogInfo } from 'src/entities/loginfo.entity';
 
+/**
+ *
+ */
 @Module({
   imports: [TypeOrmModule.forFeature([LogInfo])],
   controllers: [AuthController],

@@ -7,6 +7,9 @@ import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import ormConfig from 'ormconfig';
 
+/**
+ *
+ */
 @Module({
   imports: [
     ConfigModule.forRoot({

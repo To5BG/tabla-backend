@@ -1,6 +1,9 @@
 import { BeforeInsert, Column, Entity, OneToOne, PrimaryColumn } from 'typeorm';
 import { User } from './user.entity';
 
+/**
+ *
+ */
 @Entity('loginfo_table')
 export class LogInfo {
   @PrimaryColumn()
