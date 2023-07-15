@@ -1,5 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AuthController } from '../../src/auth/auth.controller';
+import { AuthService } from 'src/auth/auth.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -7,7 +8,16 @@ describe('AuthController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController]
-    }).compile();
+    })
+      .useMocker(token => {
+        if (token === AuthService)
+          return {
+            /**
+             * Mock AuthService here
+             */
+          };
+      })
+      .compile();
 
     controller = module.get<AuthController>(AuthController);
   });

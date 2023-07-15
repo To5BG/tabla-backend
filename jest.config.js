@@ -8,5 +8,8 @@ module.exports = {
   testRegex: 'test/.*',
   testEnvironment: 'node',
   collectCoverageFrom: ['src/**'],
-  coverageReporters: ['json', 'lcov', 'text', 'html']
+  coverageReporters: ['json', 'lcov', 'text', 'html'],
+  moduleNameMapper: {
+    '^src/(.*)$': '<rootDir>/src/$1'
+  }
 };
