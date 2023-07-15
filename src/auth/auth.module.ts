@@ -6,7 +6,7 @@ import { LogInfo } from 'src/entities/loginfo.entity';
 import { UsersModule } from 'src/user/user.module';
 
 /**
- *
+ * Authentication module
  */
 @Module({
   imports: [TypeOrmModule.forFeature([LogInfo]), UsersModule],

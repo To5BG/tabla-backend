@@ -8,7 +8,7 @@ import { UsersModule } from './user/user.module';
 import ormConfig from 'ormconfig';
 
 /**
- *
+ * Main App module
  */
 @Module({
   imports: [

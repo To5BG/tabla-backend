@@ -1,7 +1,7 @@
 import { IsAlphanumeric, IsEmail, IsNotEmpty } from 'class-validator';
 
 /**
- *
+ * Model for sign-up/register credentials
  */
 export class SignUpCredentials {
   @IsEmail()

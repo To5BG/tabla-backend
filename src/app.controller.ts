@@ -2,7 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 
 /**
- *
+ * Endpoints for main app
  */
 @Controller()
 export class AppController {
