@@ -10,9 +10,9 @@ export default () =>
     password: process.env.POSTGRES_PASSWORD,
     database: process.env.POSTGRES_DATABASE,
 
-    entities: [__dirname + '/**/entities/*.entity.{ts, js}'],
+    entities: [__dirname + '/**/entities/*.entity.{t,j}s'],
     synchronize: process.env.MODE === 'DEV',
-    migrations: [__dirname + '/**/migration/*.{ts, js}'],
+    migrations: [__dirname + '/**/migration/*.{t,j}s'],
     migrationsTableName: 'migration_table',
     ssl: process.env.MODE === 'PROD'
   } as DataSourceOptions);

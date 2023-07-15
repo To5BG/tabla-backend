@@ -11,7 +11,7 @@ docker run \
   -e POSTGRES_DB=$POSTGRES_DATABASE \
   -e POSTGRES_USER=$POSTGRES_USERNAME \
   -v $DOCKER_VOLUME:/var/lib/postgresql/data \
-  -p 5433:5432 \
+  -p $POSTGRES_PORT:5432 \
   -d postgres
 
 # allow time for cont init
