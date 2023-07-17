@@ -4,13 +4,29 @@ import { AuthService } from './auth.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LogInfo } from 'src/entities/loginfo.entity';
 import { UsersModule } from 'src/user/user.module';
+import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard } from './auth.guard';
 
 /**
  * Authentication module
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([LogInfo]), UsersModule],
+  imports: [
+    ConfigModule.forRoot(),
+    JwtModule.register({
+      global: true,
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: process.env.JWT_EXPIRATION }
+    }),
+    TypeOrmModule.forFeature([LogInfo]),
+    UsersModule
+  ],
   controllers: [AuthController],
-  providers: [AuthService]
+  providers: [{
+    provide: APP_GUARD,
+    useClass: AuthGuard
+  }, AuthService]
 })
 export class AuthModule {}

@@ -26,10 +26,11 @@ export class UsersService {
       }
     });
     if (!user) return undefined;
-    await this.usersRepository.update(user.id, {
+    const new_data = {
       lastLoggedIn: new Date(),
       status: Status.ONLINE
-    });
+    };
+    return this.usersRepository.update(user.id, new_data).then(() => ({ ...user, ...new_data } as User));
   }
 
   /**

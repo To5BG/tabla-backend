@@ -8,6 +8,7 @@ import { InvalidEmailOrPassword } from 'src/exceptions/invalidEmailOrPassword.ex
 import { CouldNotSignUp } from 'src/exceptions/couldNotSignUp.exception';
 import { CouldNotLogin } from 'src/exceptions/couldNotLogin.exception';
 import { DuplicateEmail } from 'src/exceptions/emailExists.exception';
+import { JwtService } from '@nestjs/jwt';
 
 /**
  * Service to handle authentication logic (logging and registering)
@@ -17,7 +18,8 @@ export class AuthService {
   constructor(
     @InjectRepository(LogInfo)
     private loginInfoRepository: Repository<LogInfo>,
-    private usersService: UsersService
+    private usersService: UsersService,
+    private jwtService: JwtService
   ) {}
 
   /**
@@ -28,7 +30,7 @@ export class AuthService {
    * @throws {CouldNotLogin} if package/db errors out
    * @returns {string} The user_id if credentials are valid
    */
-  async signIn(email: string, pass: string): Promise<string> {
+  async signIn(email: string, pass: string): Promise<{ access_token: string }> {
     let user_id: string;
     return new Promise((resolve, reject) =>
       this.loginInfoRepository
@@ -53,7 +55,16 @@ export class AuthService {
           if (!res) throw new InvalidEmailOrPassword();
           return this.usersService.login(user_id);
         })
-        .then(() => resolve(user_id))
+        .then(res => {
+          if (!res) throw new CouldNotLogin();
+          const payload = { sub: res.id, username: res.username, date: res.lastLoggedIn };
+          return this.jwtService.signAsync(payload);
+        })
+        .then(res =>
+          resolve({
+            access_token: res
+          })
+        )
         .catch(rej => reject(rej))
     );
   }
