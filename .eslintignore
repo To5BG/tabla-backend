@@ -5,3 +5,4 @@ dist
 coverage
 ormconfig.json
 jsdoc
+migration

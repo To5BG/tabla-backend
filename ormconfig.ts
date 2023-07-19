@@ -1,3 +1,4 @@
+import { join } from 'path';
 import { DataSourceOptions } from 'typeorm';
 
 export default () =>
@@ -9,10 +10,9 @@ export default () =>
     username: process.env.POSTGRES_USERNAME,
     password: process.env.POSTGRES_PASSWORD,
     database: process.env.POSTGRES_DATABASE,
-
-    entities: [__dirname + '/**/entities/*.entity.{t,j}s'],
+    entities: [join(__dirname, 'src', 'entities', '**', '*.entity.{t,j}s')],
     synchronize: process.env.MODE === 'DEV',
-    migrations: [__dirname + '/**/migration/*.{t,j}s'],
+    migrations: [join(__dirname, 'migration', '*.{t,j}s')],
     migrationsTableName: 'migration_table',
     ssl: process.env.MODE === 'PROD'
   } as DataSourceOptions);
