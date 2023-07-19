@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { LogInfo } from 'src/entities/loginfo.entity';
+import { Credentials } from 'src/entities/credentials.entity';
 import { UsersModule } from 'src/user/user.module';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -18,7 +18,7 @@ import { AuthGuard } from './auth.guard';
     JwtModule.register({
       global: true
     }),
-    TypeOrmModule.forFeature([LogInfo]),
+    TypeOrmModule.forFeature([Credentials]),
     UsersModule
   ],
   controllers: [AuthController],

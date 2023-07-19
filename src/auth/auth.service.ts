@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LogInfo } from 'src/entities/loginfo.entity';
+import { Credentials } from 'src/entities/credentials.entity';
 import { Repository } from 'typeorm';
 import { UsersService } from 'src/user/user.service';
 import * as bcrypt from 'bcrypt';
@@ -23,8 +23,8 @@ export interface TokenPair {
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(LogInfo)
-    private loginInfoRepository: Repository<LogInfo>,
+    @InjectRepository(Credentials)
+    private loginInfoRepository: Repository<Credentials>,
     private usersService: UsersService,
     private jwtService: JwtService
   ) {}

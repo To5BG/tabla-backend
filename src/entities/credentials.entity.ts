@@ -3,8 +3,8 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 /**
  * Sensitive user information pertinent to authentication
  */
-@Entity('loginfo_table')
-export class LogInfo {
+@Entity('credentials_table')
+export class Credentials {
   @PrimaryColumn()
   user_id: string;
 
