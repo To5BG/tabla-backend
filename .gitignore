@@ -401,3 +401,5 @@ dist
 
 ormconfig.json
 jsdoc
+*.pem
+secrets.txt

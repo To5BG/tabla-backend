@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignInCredentials } from 'src/models/signcred.model';
 import { SignUpCredentials } from 'src/models/registercred.model';
-import { Public } from 'src/decorators/publicEndpoint.decorator';
+import { Auth, AuthType } from 'src/auth/authType.decorator';
 
 /**
  * Endpoints for authentication (logging and registering)
@@ -16,7 +16,7 @@ export class AuthController {
    * @param cred Credentials to use for login (email + password)
    * @returns A refresh token to use for the AS
    */
-  @Public()
+  @Auth(AuthType.NONE)
   @Post('login')
   signIn(@Body() cred: SignInCredentials) {
     return this.authService.signIn(cred.email, cred.password);
@@ -27,7 +27,7 @@ export class AuthController {
    * @param cred Credentials to use for registeration (user + email + password)
    * @returns Id of newly added user
    */
-  @Public()
+  @Auth(AuthType.NONE)
   @Post('signup')
   signUp(@Body() cred: SignUpCredentials) {
     return this.authService.signUp(cred.email, cred.username, cred.password);

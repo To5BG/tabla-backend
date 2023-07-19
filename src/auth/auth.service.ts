@@ -9,6 +9,13 @@ import { CouldNotSignUp } from 'src/exceptions/couldNotSignUp.exception';
 import { CouldNotLogin } from 'src/exceptions/couldNotLogin.exception';
 import { DuplicateEmail } from 'src/exceptions/emailExists.exception';
 import { JwtService } from '@nestjs/jwt';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+export interface TokenPair {
+  access_token: string;
+  refresh_token: string;
+}
 
 /**
  * Service to handle authentication logic (logging and registering)
@@ -30,7 +37,7 @@ export class AuthService {
    * @throws {CouldNotLogin} if package/db errors out
    * @returns {string} The user_id if credentials are valid
    */
-  async signIn(email: string, pass: string): Promise<{ access_token: string }> {
+  async signIn(email: string, pass: string): Promise<TokenPair> {
     let user_id: string;
     return new Promise((resolve, reject) =>
       this.loginInfoRepository
@@ -57,12 +64,25 @@ export class AuthService {
         })
         .then(res => {
           if (!res) throw new CouldNotLogin();
-          const payload = { sub: res.id, username: res.username, date: res.lastLoggedIn };
-          return this.jwtService.signAsync(payload);
+          const payload = { sub: res.id, username: res.username };
+          return Promise.all([
+            this.jwtService.signAsync(payload, {
+              privateKey: readFileSync(join(__dirname, '..', '..', '..', 'jwtES384key.pem'), 'utf-8'),
+              expiresIn: parseInt(process.env.JWT_ACCESS_TIME || '60', 10),
+              algorithm: 'ES384'
+            }),
+            this.jwtService.signAsync(payload, {
+              secret: process.env.JWT_REFRESH_SECRET,
+              expiresIn: parseInt(process.env.JWT_REFRESH_TIME || '3600', 10),
+              algorithm: 'HS512'
+            })
+          ]);
         })
+        // TODO: Send confirmation once a mailer is incorporated
         .then(res =>
           resolve({
-            access_token: res
+            access_token: res[0],
+            refresh_token: res[1]
           })
         )
         .catch(rej => reject(rej))
@@ -79,6 +99,7 @@ export class AuthService {
    */
   async signUp(email: string, username: string, pass: string): Promise<string> {
     let user_id: string;
+    // check for unique email
     const res = await this.loginInfoRepository.findOne({
       where: {
         email: email
@@ -102,6 +123,7 @@ export class AuthService {
           user_id = res[1].id;
           return this.loginInfoRepository.insert(log_info);
         })
+        // TODO: Send confirmation once a mailer is incorporated
         .then(() => resolve(user_id))
         .catch(rej => reject(rej))
     );

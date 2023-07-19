@@ -16,17 +16,18 @@ import { AuthGuard } from './auth.guard';
   imports: [
     ConfigModule.forRoot(),
     JwtModule.register({
-      global: true,
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: process.env.JWT_EXPIRATION }
+      global: true
     }),
     TypeOrmModule.forFeature([LogInfo]),
     UsersModule
   ],
   controllers: [AuthController],
-  providers: [{
-    provide: APP_GUARD,
-    useClass: AuthGuard
-  }, AuthService]
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard
+    },
+    AuthService
+  ]
 })
 export class AuthModule {}
