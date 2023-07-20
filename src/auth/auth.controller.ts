@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { SignInCredentials } from 'src/models/signcred.model';
-import { SignUpCredentials } from 'src/models/registercred.model';
+import { EmailPassPair } from 'src/models/emailPassPair.model';
+import { SignUpCredentials } from 'src/models/registerCred.model';
 import { Auth, AuthType } from 'src/auth/authType.decorator';
 
 /**
@@ -18,7 +18,7 @@ export class AuthController {
    */
   @Auth(AuthType.NONE)
   @Post('login')
-  signIn(@Body() cred: SignInCredentials) {
+  signIn(@Body() cred: EmailPassPair) {
     return this.authService.signIn(cred.email, cred.password);
   }
 
@@ -38,9 +38,9 @@ export class AuthController {
    * @param req Request to process
    * @returns Payload of JWT token with the request
    */
-  @Get('profile')
+  @Get('token')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getProfile(@Request() req: any) {
-    return req.user;
+  getToken(@Request() req: any) {
+    return req.token;
   }
 }

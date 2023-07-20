@@ -11,6 +11,9 @@ import { DuplicateEmail } from 'src/exceptions/emailExists.exception';
 import { JwtService } from '@nestjs/jwt';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { CouldNotUpdate } from 'src/exceptions/couldNotUpdate.exception';
+import { NewPasswordMatch } from 'src/exceptions/newPasswordMatch.exception';
+import { randomUUID } from 'crypto';
 
 export interface TokenPair {
   access_token: string;
@@ -18,13 +21,13 @@ export interface TokenPair {
 }
 
 /**
- * Service to handle authentication logic (logging and registering)
+ * Service to handle authentication logic (logging, registering, tokens)
  */
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(Credentials)
-    private loginInfoRepository: Repository<Credentials>,
+    private credRepository: Repository<Credentials>,
     private usersService: UsersService,
     private jwtService: JwtService
   ) {}
@@ -37,10 +40,10 @@ export class AuthService {
    * @throws {CouldNotLogin} if package/db errors out
    * @returns {string} The user_id if credentials are valid
    */
-  async signIn(email: string, pass: string): Promise<TokenPair> {
-    let user_id: string;
+  async signIn(email: string, pass: string, tokenid?: string): Promise<TokenPair> {
+    let cred: Credentials;
     return new Promise((resolve, reject) =>
-      this.loginInfoRepository
+      this.credRepository
         .findOne({
           where: {
             email: email
@@ -49,7 +52,7 @@ export class AuthService {
         .then(async res => {
           // email not found
           if (!res) throw new InvalidEmailOrPassword();
-          user_id = res.user_id;
+          cred = res;
           return bcrypt
             .compare(pass, res.password)
             .catch(() => {
@@ -60,11 +63,16 @@ export class AuthService {
         .then(res => {
           // incorrect password
           if (!res) throw new InvalidEmailOrPassword();
-          return this.usersService.login(user_id);
+          return this.usersService.login(cred.user_id);
         })
         .then(res => {
           if (!res) throw new CouldNotLogin();
-          const payload = { sub: res.id, username: res.username };
+          const payload = {
+            sub: res.id,
+            username: res.username,
+            token_id: tokenid ?? randomUUID(),
+            version: cred.version
+          };
           return Promise.all([
             this.jwtService.signAsync(payload, {
               privateKey: readFileSync(join(__dirname, '..', '..', '..', 'jwtES384key.pem'), 'utf-8'),
@@ -99,13 +107,7 @@ export class AuthService {
    */
   async signUp(email: string, username: string, pass: string): Promise<string> {
     let user_id: string;
-    // check for unique email
-    const res = await this.loginInfoRepository.findOne({
-      where: {
-        email: email
-      }
-    });
-    if (res) throw new DuplicateEmail();
+    await this.checkEmailUniqueness(email);
     return new Promise((resolve, reject) =>
       Promise.all([
         bcrypt.hash(pass, 12).catch(() => {
@@ -115,17 +117,130 @@ export class AuthService {
       ])
         .then(res => {
           if (!res[1]) throw new CouldNotSignUp();
-          const log_info = this.loginInfoRepository.create({
-            user_id: res[1].id,
+          user_id = res[1].id;
+          const log_info = this.credRepository.create({
+            user_id: user_id,
             password: res[0],
             email: email
           });
-          user_id = res[1].id;
-          return this.loginInfoRepository.insert(log_info);
+          return this.credRepository.insert(log_info);
         })
         // TODO: Send confirmation once a mailer is incorporated
         .then(() => resolve(user_id))
         .catch(rej => reject(rej))
     );
   }
+
+  /**
+   * Method to update the password of a user
+   * @param {string} id Id of user to be updated
+   * @param {string} oldPassword Old password of user for verification
+   * @param {string} newPassword New password of user
+   * @returns {Credentials | undefined} Updated credentials object if successful, else undefined
+   */
+  async updatePassword(id: string, oldPassword: string, newPassword: string): Promise<Credentials> {
+    let new_data = {};
+    const cred = await this.credRepository.findOne({
+      where: {
+        user_id: id
+      }
+    });
+    if (!cred) throw new CouldNotUpdate();
+    return new Promise((resolve, reject) =>
+      Promise.all([
+        bcrypt
+          .compare(oldPassword, cred.password)
+          .catch(() => {
+            throw new CouldNotUpdate();
+          })
+          .then(res => res),
+        bcrypt
+          .compare(newPassword, cred.password)
+          .catch(() => {
+            throw new CouldNotUpdate();
+          })
+          .then(res => res)
+      ])
+        .then(res => {
+          if (!res[0]) throw new InvalidEmailOrPassword();
+          if (res[1]) throw new NewPasswordMatch();
+          new_data = {
+            lastPassword: oldPassword,
+            password: newPassword,
+            version: cred.version + 1,
+            passwordUpdatedAt: new Date()
+          };
+          return this.credRepository.update(id, new_data);
+        })
+        .then(() => resolve({ ...cred, ...new_data } as Credentials))
+        .catch(rej => reject(rej))
+    );
+  }
+
+  /**
+   * Method to update the email of a user
+   * @param {string} id Id of user to be updated
+   * @param {string} email New email of user
+   * @returns {Credentials | undefined} Updated credentials object if successful, else undefined
+   */
+  async updateEmail(id: string, email: string): Promise<Credentials> {
+    await this.checkEmailUniqueness(email);
+    const cred = await this.credRepository.findOne({
+      where: {
+        user_id: id
+      }
+    });
+    if (!cred) throw new CouldNotUpdate();
+    const new_data = {
+      email: email
+    };
+    return this.credRepository.update(id, new_data).then(() => ({ ...cred, ...new_data } as Credentials));
+  }
+
+  // async refreshTokenAccess(refreshToken: string): Promise<TokenPair> {
+  //   const { id, version, tokenId } =
+  //     await this.jwtService.verifyToken<IRefreshToken>(
+  //       refreshToken,
+  //       TokenTypeEnum.REFRESH,
+  //     );
+  //   await this.checkIfTokenIsBlacklisted(id, tokenId);
+  //   const user = await this.usersService.userByCredentials(id, version);
+  //   const [accessToken, newRefreshToken] = await this.generateAuthTokens(
+  //     user,
+  //     domain,
+  //     tokenId,
+  //   );
+  //   return { user, accessToken, refreshToken: newRefreshToken };
+  // }
+
+  /**
+   * Method to check the uniqueness of an email
+   * @param {string} email Email to be checked
+   * @throws {DuplicateEmail} if the email is already used
+   * @returns {void} void
+   */
+  private async checkEmailUniqueness(email: string): Promise<void> {
+    // check for unique email
+    const res = await this.credRepository.findOne({
+      where: {
+        email: email
+      }
+    });
+    if (res) throw new DuplicateEmail();
+  }
+
+  // // checks if a token given the ID of the user and ID of token exists on the database
+  // private async checkIfTokenIsBlacklisted(
+  //   userId: number,
+  //   tokenId: string,
+  // ): Promise<void> {
+  //   const count = await this.blacklistedTokensRepository.count({
+  //     user: userId,
+  //     tokenId,
+  //   });
+
+  //   if (count > 0) {
+  //     throw new UnauthorizedException('Token is invalid');
+  //   }
+  // }
 }

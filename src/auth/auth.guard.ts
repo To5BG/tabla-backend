@@ -49,7 +49,7 @@ export class AuthGuard implements CanActivate {
         algorithms: authType === AuthType.ACCESS ? ['ES384'] : ['HS512'],
         maxAge: time
       });
-      request['user'] = payload;
+      request['token'] = payload;
     } catch {
       throw new UnauthorizedException();
     }
