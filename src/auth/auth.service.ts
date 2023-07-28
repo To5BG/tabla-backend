@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Credentials } from 'src/entities/credentials.entity';
 import { Repository } from 'typeorm';
@@ -14,11 +14,8 @@ import { join } from 'path';
 import { CouldNotUpdate } from 'src/exceptions/couldNotUpdate.exception';
 import { NewPasswordMatch } from 'src/exceptions/newPasswordMatch.exception';
 import { randomUUID } from 'crypto';
-
-export interface TokenPair {
-  access_token: string;
-  refresh_token: string;
-}
+import { TokenPair } from 'src/types/TokenPair';
+import { TokenPayload } from 'src/types/TokenPayload';
 
 /**
  * Service to handle authentication logic (logging, registering, tokens)

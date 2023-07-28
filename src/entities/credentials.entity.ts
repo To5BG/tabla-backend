@@ -14,9 +14,6 @@ export class Credentials {
   @Column({ type: 'varchar', length: 64 })
   password: string;
 
-  @Column({ type: 'varchar', length: 64, default: '' })
-  lastPassword: string;
-
   @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   passwordUpdatedAt: Date;
 

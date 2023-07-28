@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Status, User } from 'src/entities/user.entity';
+import { User } from 'src/entities/user.entity';
 import { DuplicateUsername } from 'src/exceptions/usernameExists.exception';
+import { Status } from 'src/types/Status';
 import { QueryFailedError, Repository } from 'typeorm';
 
 /**
@@ -20,11 +21,7 @@ export class UsersService {
    * @returns {User | undefined} Updated user object if successful, else undefined
    */
   async login(id: string): Promise<User | undefined> {
-    const user = await this.usersRepository.findOne({
-      where: {
-        id: id
-      }
-    });
+    const user = await this.getUser(id);
     if (!user) return undefined;
     const new_data = {
       lastLoggedIn: new Date(),
@@ -39,11 +36,7 @@ export class UsersService {
    * @returns {User | undefined} Updated user object if successful, else undefined
    */
   async logout(id: string): Promise<User | undefined> {
-    const user = await this.usersRepository.findOne({
-      where: {
-        id: id
-      }
-    });
+    const user = await this.getUser(id);
     if (!user) return undefined;
     const new_data = {
       status: Status.OFFLINE
@@ -58,11 +51,7 @@ export class UsersService {
    * @returns {User | undefined} Updated user object if successful, else undefined
    */
   async updateUsername(id: string, username: string): Promise<User | undefined> {
-    const user = await this.usersRepository.findOne({
-      where: {
-        id: id
-      }
-    });
+    const user = await this.getUser(id);
     if (!user) return undefined;
     const new_data = {
       username: username
@@ -100,11 +89,7 @@ export class UsersService {
    * @returns {User | undefined} The user that was removed, if the operation was a success, else undefined
    */
   async removeUser(id: string): Promise<User | undefined> {
-    const user = await this.usersRepository.findOne({
-      where: {
-        id: id
-      }
-    });
+    const user = await this.getUser(id);
     if (!user) return undefined;
     return this.usersRepository.delete(id).then(() => user);
   }

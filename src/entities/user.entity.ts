@@ -1,14 +1,5 @@
+import { Status } from 'src/types/Status';
 import { PrimaryGeneratedColumn, Column, CreateDateColumn, Entity } from 'typeorm';
-
-/**
- * Indicator for user status
- */
-export enum Status {
-  ONLINE = 'online',
-  OFFLINE = 'offline',
-  AWAY = 'away',
-  DDISTURB = 'do-not-disturb'
-}
 
 /**
  * Main user information
