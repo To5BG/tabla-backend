@@ -246,7 +246,7 @@ export class AuthService {
   private async generateAccessToken(payload: TokenPayload): Promise<string> {
     return this.jwtService.signAsync(payload, {
       privateKey: readFileSync(join(__dirname, '..', '..', '..', 'jwtES384key.pem'), 'utf-8'),
-      expiresIn: parseInt(process.env.JWT_ACCESS_TIME || '60', 10),
+      expiresIn: parseInt(process.env.JWT_ACCESS_TIME ?? '60', 10),
       algorithm: 'ES384'
     });
   }
@@ -259,7 +259,7 @@ export class AuthService {
   private async generateRefreshToken(payload: TokenPayload): Promise<string> {
     return this.jwtService.signAsync(payload, {
       secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: parseInt(process.env.JWT_REFRESH_TIME || '3600', 10),
+      expiresIn: parseInt(process.env.JWT_REFRESH_TIME ?? '3600', 10),
       algorithm: 'HS512'
     });
   }
