@@ -197,21 +197,39 @@ export class AuthService {
     return this.credRepository.update(id, new_data).then(() => ({ ...cred, ...new_data } as Credentials));
   }
 
-  // async refreshTokenAccess(refreshToken: string): Promise<TokenPair> {
-  //   const { id, version, tokenId } =
-  //     await this.jwtService.verifyToken<IRefreshToken>(
-  //       refreshToken,
-  //       TokenTypeEnum.REFRESH,
-  //     );
-  //   await this.checkIfTokenIsBlacklisted(id, tokenId);
-  //   const user = await this.usersService.userByCredentials(id, version);
-  //   const [accessToken, newRefreshToken] = await this.generateAuthTokens(
-  //     user,
-  //     domain,
-  //     tokenId,
-  //   );
-  //   return { user, accessToken, refreshToken: newRefreshToken };
-  // }
+  /**
+   * Method for getting a new refresh token (and an access token for convenience)
+   * @param id Id of user to renew token for
+   * @param version Version of user credentials
+   * @param tokenId Id of token used for request
+   * @returns A set of new refresh and access tokens for authentication
+   */
+  async refreshTokenAccess(id: string, version: number, tokenId: string): Promise<TokenPair> {
+    await this.checkIfTokenIsBlacklisted(id, tokenId);
+    return new Promise((resolve, reject) => {
+      this.usersService
+        .getUser(id)
+        .then(res => {
+          if (!res) throw new CouldNotUpdate();
+          return {
+            sub: res.id,
+            username: res.username,
+            token_id: tokenId,
+            version: version
+          };
+        })
+        .then(res => {
+          return Promise.all([this.generateAccessToken(res), this.generateRefreshToken(res)]);
+        })
+        .then(res =>
+          resolve({
+            access_token: res[0],
+            refresh_token: res[1]
+          })
+        )
+        .catch(rej => reject(rej));
+    });
+  }
 
   /**
    * Method to check the uniqueness of an email
@@ -229,18 +247,16 @@ export class AuthService {
     if (res) throw new DuplicateEmail();
   }
 
-  // // checks if a token given the ID of the user and ID of token exists on the database
-  // private async checkIfTokenIsBlacklisted(
-  //   userId: number,
-  //   tokenId: string,
-  // ): Promise<void> {
-  //   const count = await this.blacklistedTokensRepository.count({
-  //     user: userId,
-  //     tokenId,
-  //   });
+  // checks if a token given the ID of the user and ID of token exists on the database
+  private async checkIfTokenIsBlacklisted(userId: string, tokenId: string): Promise<void> {
+    console.log(userId + ' ' + tokenId);
+    // const count = await this.blacklistedTokensRepository.count({
+    //   user: userId,
+    //   tokenId,
+    // });
 
-  //   if (count > 0) {
-  //     throw new UnauthorizedException('Token is invalid');
-  //   }
-  // }
+    // if (count > 0) {
+    //   throw new UnauthorizedException('Invalid token');
+    // }
+  }
 }
