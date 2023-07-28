@@ -73,18 +73,7 @@ export class AuthService {
             token_id: tokenid ?? randomUUID(),
             version: cred.version
           };
-          return Promise.all([
-            this.jwtService.signAsync(payload, {
-              privateKey: readFileSync(join(__dirname, '..', '..', '..', 'jwtES384key.pem'), 'utf-8'),
-              expiresIn: parseInt(process.env.JWT_ACCESS_TIME || '60', 10),
-              algorithm: 'ES384'
-            }),
-            this.jwtService.signAsync(payload, {
-              secret: process.env.JWT_REFRESH_SECRET,
-              expiresIn: parseInt(process.env.JWT_REFRESH_TIME || '3600', 10),
-              algorithm: 'HS512'
-            })
-          ]);
+          return Promise.all([this.generateAccessToken(payload), this.generateRefreshToken(payload)]);
         })
         // TODO: Send confirmation once a mailer is incorporated
         .then(res =>
@@ -164,9 +153,14 @@ export class AuthService {
         .then(res => {
           if (!res[0]) throw new InvalidEmailOrPassword();
           if (res[1]) throw new NewPasswordMatch();
+          return bcrypt.hash(newPassword, 12);
+        })
+        .catch(() => {
+          throw new CouldNotSignUp();
+        })
+        .then(res => {
           new_data = {
-            lastPassword: oldPassword,
-            password: newPassword,
+            password: res,
             version: cred.version + 1,
             passwordUpdatedAt: new Date()
           };
@@ -245,6 +239,32 @@ export class AuthService {
       }
     });
     if (res) throw new DuplicateEmail();
+  }
+
+  /**
+   * Method to generate an access token
+   * @param {TokenPayload} payload Payload of JWT access token
+   * @returns {string} The resulting token
+   */
+  private async generateAccessToken(payload: TokenPayload): Promise<string> {
+    return this.jwtService.signAsync(payload, {
+      privateKey: readFileSync(join(__dirname, '..', '..', '..', 'jwtES384key.pem'), 'utf-8'),
+      expiresIn: parseInt(process.env.JWT_ACCESS_TIME || '60', 10),
+      algorithm: 'ES384'
+    });
+  }
+
+  /**
+   * Method to generate a refresh token
+   * @param {TokenPayload} payload Payload of JWT refresh token
+   * @returns {string} The resulting token
+   */
+  private async generateRefreshToken(payload: TokenPayload): Promise<string> {
+    return this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: parseInt(process.env.JWT_REFRESH_TIME || '3600', 10),
+      algorithm: 'HS512'
+    });
   }
 
   // checks if a token given the ID of the user and ID of token exists on the database
