@@ -1,8 +1,20 @@
-import { Body, Controller, Get, Post, Request } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpException,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { EmailPassPair } from 'src/models/emailPassPair.model';
 import { SignUpCredentials } from 'src/models/registerCred.model';
-import { Auth, AuthType } from 'src/auth/authType.decorator';
+import { Auth, AuthType } from 'src/decorators/authType.decorator';
+import { MRequest } from 'src/types/MRequest';
+import { Response } from 'express';
 
 /**
  * Endpoints for authentication (logging and registering)
@@ -12,23 +24,69 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   /**
-   * Endpoint used for logging in the application
-   * @param cred Credentials to use for login (email + password)
-   * @returns A refresh token to use for the AS
+   * Endpoint for logging out of the system
+   * @param {MRequest} req
+   * @param {Response} response
+   * @returns Prompt message and the username of whoever logged out
    */
-  @Auth(AuthType.NONE)
-  @Post('login')
-  signIn(@Body() cred: EmailPassPair) {
-    return this.authService.signIn(cred.email, cred.password);
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async signOut(@Req() req: MRequest, @Res() response: Response) {
+    if (!process.env.REFRESH_COOKIE_NAME) throw new UnauthorizedException();
+    const token = req.signedCookies[process.env.REFRESH_COOKIE_NAME];
+    if (!token || !token.exp) throw new UnauthorizedException();
+    return this.authService
+      .signOut(token.sub, token.token_id, token.exp)
+      .then(res => this.clearRefreshToken(response).json({ message: 'Logout was successful.', user: res }));
   }
 
   /**
-   * Endpoint used for registering in the application
-   * @param cred Credentials to use for registeration (user + email + password)
-   * @returns Id of newly added user
+   * Endpoint for logging into the system
+   * @param {EmailPassPair} cred Credentials used to login
+   * @param {Response} response
+   * @returns An access token, and a refresh token in an Http-only signed cookie
+   */
+  @Auth(AuthType.NONE)
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  async signIn(@Body() cred: EmailPassPair, @Res() response: Response) {
+    return this.authService
+      .signIn(cred.email, cred.password)
+      .then(res => this.saveRefreshToken(response, res.refresh_token).json({ access_token: res.access_token }));
+  }
+
+  /**
+   * Endpoint for registering into the system
+   * @param {EmailPassPair} cred Credentials to be used in the future
+   * @param {Response} response
+   * @returns Prompt message and username of whoever registered
    */
   @Auth(AuthType.NONE)
   @Post('signup')
+  @HttpCode(HttpStatus.OK)
+  async signUp(@Body() cred: SignUpCredentials, @Res() response: Response) {
+    return this.authService
+      .signUp(cred.email, cred.username, cred.password)
+      .then(res => response.json({ message: 'Registration was successful.', user: res }));
+  }
+
+  /**
+   * Endpoint for refreshing access to the system, using refresh token rotation
+   * @param {MRequest} req
+   * @param {Response} response
+   * @returns New access token, and a new refresh token in an Http-only signed cookie
+   */
+  @Auth(AuthType.REFRESH)
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Req() req: MRequest, @Res() response: Response) {
+    const token = req.token;
+    if (!token || !token.exp) throw new UnauthorizedException();
+    return this.authService
+      .refreshTokenAccess(token.sub, token.version, token.token_id, token.exp)
+      .then(res => this.saveRefreshToken(response, res.refresh_token).json({ access_token: res.access_token }));
+  }
+
   /**
    * Helper for clearing the refresh token from a response
    * @param {Response} res Initial response
