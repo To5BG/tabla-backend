@@ -230,7 +230,7 @@ export class AuthService {
    * @param {number} version Version of user credentials
    * @param {string} tokenId Id of token used for request
    * @param {number} exp Expiration time of token
-   * @returns A set of new refresh and access tokens for authentication
+   * @returns {TokenPair} A set of new refresh and access tokens for authentication
    */
   async refreshTokenAccess(id: string, version: number, tokenId: string, exp: number): Promise<TokenPair> {
     await this.checkIfTokenIsBlacklisted(id, tokenId);
@@ -268,7 +268,7 @@ export class AuthService {
    * Method to check the uniqueness of an email
    * @param {string} email Email to be checked
    * @throws {DuplicateEmail} if the email is already used
-   * @returns {void} void
+   * @returns {void}
    */
   private async checkEmailUniqueness(email: string): Promise<void> {
     // check for unique email
@@ -281,7 +281,7 @@ export class AuthService {
   }
 
   /**
-   * Method to generate an access token
+   * Helper for generating an access token
    * @param {TokenPayload} payload Payload of JWT access token
    * @returns {string} The resulting token
    */
@@ -294,7 +294,7 @@ export class AuthService {
   }
 
   /**
-   * Method to generate a refresh token
+   * Helper for generating a refresh token
    * @param {TokenPayload} payload Payload of JWT refresh token
    * @returns {string} The resulting token
    */
@@ -306,7 +306,12 @@ export class AuthService {
     });
   }
 
-  // checks if a token given the ID of the user and ID of token exists on the database
+  /**
+   * Throws an error in case the blacklist cache contains the given userid-tokenid pair
+   * @param {string} userId Id of user
+   * @param {string} tokenId Id of token
+   * @returns {void}
+   */
   private async checkIfTokenIsBlacklisted(userId: string, tokenId: string): Promise<void> {
     const time = await this.cacheManager.get(`blacklist_token${userId}:${tokenId}`);
     if (time) throw new UnauthorizedException('Invalid token');

@@ -17,7 +17,7 @@ import { MRequest } from 'src/types/MRequest';
 import { Response } from 'express';
 
 /**
- * Endpoints for authentication (logging and registering)
+ * Endpoints for authentication or manipulating sensitive information
  */
 @Controller('')
 export class AuthController {
