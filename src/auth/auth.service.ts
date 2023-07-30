@@ -42,7 +42,7 @@ export class AuthService {
    * @throws {CouldNotLogin} if package/db errors out
    * @returns {TokenPair} Pair of access and refresh token to be used
    */
-  async signIn(email: string, pass: string, tokenid?: string): Promise<TokenPair> {
+  async signIn(email: string, pass: string): Promise<TokenPair> {
     let cred: Credentials;
     return new Promise((resolve, reject) =>
       this.credRepository
@@ -72,10 +72,12 @@ export class AuthService {
           const payload = {
             sub: res.id,
             username: res.username,
-            token_id: tokenid ?? randomUUID(),
             version: cred.version
           };
-          return Promise.all([this.generateAccessToken(payload), this.generateRefreshToken(payload)]);
+          return Promise.all([
+            this.generateAccessToken({ ...payload, token_id: randomUUID() }),
+            this.generateRefreshToken({ ...payload, token_id: randomUUID() })
+          ]);
         })
         // TODO: Send confirmation once a mailer is incorporated
         .then(res =>
@@ -228,7 +230,7 @@ export class AuthService {
    * Method for getting a new refresh token (and an access token for convenience)
    * @param {string} id Id of user to renew token for
    * @param {number} version Version of user credentials
-   * @param {string} tokenId Id of token used for request
+   * @param {string} tokenId Id of old refresh token
    * @param {number} exp Expiration time of token
    * @returns {TokenPair} A set of new refresh and access tokens for authentication
    */
@@ -242,15 +244,14 @@ export class AuthService {
           return {
             sub: res.id,
             username: res.username,
-            token_id: tokenId,
             version: version
           };
         })
         .then(res => {
           const now_unix = Math.floor(Date.now() / 1000);
           return Promise.all([
-            this.generateAccessToken(res),
-            this.generateRefreshToken(res),
+            this.generateAccessToken({ ...res, token_id: randomUUID() }),
+            this.generateRefreshToken({ ...res, token_id: randomUUID() }),
             this.cacheManager.set(`blacklist_token:${id}:${tokenId}`, now_unix, (exp - now_unix) * 1000)
           ]);
         })

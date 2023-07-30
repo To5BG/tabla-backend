@@ -1,20 +1,11 @@
-import {
-  Body,
-  Controller,
-  HttpCode,
-  HttpException,
-  HttpStatus,
-  Post,
-  Req,
-  Res,
-  UnauthorizedException
-} from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Res, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { EmailPassPair } from 'src/models/emailPassPair.model';
 import { SignUpCredentials } from 'src/models/registerCred.model';
 import { Auth, AuthType } from 'src/decorators/authType.decorator';
-import { MRequest } from 'src/types/MRequest';
 import { Response } from 'express';
+import { TokenPayload } from 'src/types/TokenPayload';
+import { UserInfo } from 'src/decorators/userInfo.decorator';
 
 /**
  * Endpoints for authentication or manipulating sensitive information
@@ -25,18 +16,17 @@ export class AuthController {
 
   /**
    * Endpoint for logging out of the system
-   * @param {MRequest} req
+   * @param {TokenPayload} userInfo Refresh JWT payload
    * @param {Response} response
    * @returns Prompt message and the username of whoever logged out
    */
+  @Auth(AuthType.REFRESH)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  async signOut(@Req() req: MRequest, @Res() response: Response) {
-    if (!process.env.REFRESH_COOKIE_NAME) throw new UnauthorizedException();
-    const token = req.signedCookies[process.env.REFRESH_COOKIE_NAME];
-    if (!token || !token.exp) throw new UnauthorizedException();
+  async signOut(@UserInfo() userInfo: TokenPayload, @Res() response: Response) {
+    if (!userInfo.exp) throw new UnauthorizedException();
     return this.authService
-      .signOut(token.sub, token.token_id, token.exp)
+      .signOut(userInfo.sub, userInfo.token_id, userInfo.exp)
       .then(res => this.clearRefreshToken(response).json({ message: 'Logout was successful.', user: res }));
   }
 
@@ -79,11 +69,10 @@ export class AuthController {
   @Auth(AuthType.REFRESH)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(@Req() req: MRequest, @Res() response: Response) {
-    const token = req.token;
-    if (!token || !token.exp) throw new UnauthorizedException();
+  async refresh(@UserInfo() userInfo: TokenPayload, @Res() response: Response) {
+    if (!userInfo.exp) throw new UnauthorizedException();
     return this.authService
-      .refreshTokenAccess(token.sub, token.version, token.token_id, token.exp)
+      .refreshTokenAccess(userInfo.sub, userInfo.version, userInfo.token_id, userInfo.exp)
       .then(res => this.saveRefreshToken(response, res.refresh_token).json({ access_token: res.access_token }));
   }
 
@@ -93,7 +82,7 @@ export class AuthController {
    * @returns {Response} Modified response (without cookie)
    */
   private clearRefreshToken(res: Response): Response {
-    if (!process.env.REFRESH_COOKIE_NAME) throw new HttpException('Uauthorized', HttpStatus.UNAUTHORIZED);
+    if (!process.env.REFRESH_COOKIE_NAME) throw new UnauthorizedException();
     return res.clearCookie(process.env.REFRESH_COOKIE_NAME);
   }
 
@@ -104,7 +93,7 @@ export class AuthController {
    * @returns {Response} Modified response (with cookie)
    */
   private saveRefreshToken(res: Response, refreshToken: string): Response {
-    if (!process.env.REFRESH_COOKIE_NAME) throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    if (!process.env.REFRESH_COOKIE_NAME) throw new UnauthorizedException();
     return res.cookie(process.env.REFRESH_COOKIE_NAME, refreshToken, {
       secure: process.env.MODE !== 'DEV',
       httpOnly: true,
