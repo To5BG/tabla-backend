@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { AuthType } from 'src/auth/authType.decorator';
+import { AuthType } from 'src/decorators/authType.decorator';
 
 /**
  * The global auth guard used by the application
@@ -63,6 +63,6 @@ export class AuthGuard implements CanActivate {
 
   private extractTokenFromCookie(request: Request): string | undefined {
     if (!process.env.REFRESH_COOKIE_NAME) return undefined;
-    return request.cookies[process.env.REFRESH_COOKIE_NAME];
+    return request.signedCookies[process.env.REFRESH_COOKIE_NAME];
   }
 }

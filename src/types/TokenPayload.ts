@@ -6,4 +6,6 @@ export interface TokenPayload {
   username: string;
   token_id: string;
   version: number;
+  exp?: number;
+  iat?: number;
 }

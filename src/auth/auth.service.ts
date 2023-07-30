@@ -18,6 +18,7 @@ import { TokenPair } from 'src/types/TokenPair';
 import { TokenPayload } from 'src/types/TokenPayload';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { RedisCache } from 'cache-manager-redis-yet';
+import { CouldNotLogout } from 'src/exceptions/couldNotLogout.exception';
 
 /**
  * Service to handle authentication logic (logging, registering, tokens)
@@ -39,7 +40,7 @@ export class AuthService {
    * @param {string} pass  Salted+hashed password that is being used
    * @throws {InvalidEmailOrPassword} if no matching email was found or password is incorrect
    * @throws {CouldNotLogin} if package/db errors out
-   * @returns {string} The user_id if credentials are valid
+   * @returns {TokenPair} Pair of access and refresh token to be used
    */
   async signIn(email: string, pass: string, tokenid?: string): Promise<TokenPair> {
     let cred: Credentials;
@@ -124,10 +125,10 @@ export class AuthService {
    * @param {string} username Username credential used for signing up
    * @param {string} pass Plain assword for signing up
    * @throws {CouldNotSignUp} if package/db errors out
-   * @returns {string} The user_id if adding user was successful
+   * @returns {string} The username if adding the user was successful
    */
   async signUp(email: string, username: string, pass: string): Promise<string> {
-    let user_id: string;
+    let user: string;
     await this.checkEmailUniqueness(email);
     return new Promise((resolve, reject) =>
       Promise.all([
@@ -138,16 +139,16 @@ export class AuthService {
       ])
         .then(res => {
           if (!res[1]) throw new CouldNotSignUp();
-          user_id = res[1].id;
+          user = res[1].username;
           const log_info = this.credRepository.create({
-            user_id: user_id,
+            user_id: res[1].id,
             password: res[0],
             email: email
           });
           return this.credRepository.insert(log_info);
         })
         // TODO: Send confirmation once a mailer is incorporated
-        .then(() => resolve(user_id))
+        .then(() => resolve(user))
         .catch(rej => reject(rej))
     );
   }

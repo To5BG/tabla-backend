@@ -29,18 +29,29 @@ export class AuthController {
    */
   @Auth(AuthType.NONE)
   @Post('signup')
-  signUp(@Body() cred: SignUpCredentials) {
-    return this.authService.signUp(cred.email, cred.username, cred.password);
+  /**
+   * Helper for clearing the refresh token from a response
+   * @param {Response} res Initial response
+   * @returns {Response} Modified response (without cookie)
+   */
+  private clearRefreshToken(res: Response): Response {
+    if (!process.env.REFRESH_COOKIE_NAME) throw new HttpException('Uauthorized', HttpStatus.UNAUTHORIZED);
+    return res.clearCookie(process.env.REFRESH_COOKIE_NAME);
   }
 
   /**
-   * Test endpoint used to get JWT payload data
-   * @param req Request to process
-   * @returns Payload of JWT token with the request
+   * Helper for adding a refresh token cookie to a response
+   * @param {Response} res Initial response
+   * @param {string} refreshToken Token to be included
+   * @returns {Response} Modified response (with cookie)
    */
-  @Get('token')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getToken(@Request() req: any) {
-    return req.token;
+  private saveRefreshToken(res: Response, refreshToken: string): Response {
+    if (!process.env.REFRESH_COOKIE_NAME) throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    return res.cookie(process.env.REFRESH_COOKIE_NAME, refreshToken, {
+      secure: process.env.MODE !== 'DEV',
+      httpOnly: true,
+      signed: true,
+      expires: new Date(Date.now() + parseInt(process.env.JWT_REFRESH_TIME ?? '60', 10) * 1000)
+    });
   }
 }
