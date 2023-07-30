@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Credentials } from 'src/entities/credentials.entity';
 import { Repository } from 'typeorm';
@@ -16,6 +16,8 @@ import { NewPasswordMatch } from 'src/exceptions/newPasswordMatch.exception';
 import { randomUUID } from 'crypto';
 import { TokenPair } from 'src/types/TokenPair';
 import { TokenPayload } from 'src/types/TokenPayload';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { RedisCache } from 'cache-manager-redis-yet';
 
 /**
  * Service to handle authentication logic (logging, registering, tokens)
@@ -23,6 +25,8 @@ import { TokenPayload } from 'src/types/TokenPayload';
 @Injectable()
 export class AuthService {
   constructor(
+    @Inject(CACHE_MANAGER)
+    private cacheManager: RedisCache,
     @InjectRepository(Credentials)
     private credRepository: Repository<Credentials>,
     private usersService: UsersService,
@@ -79,6 +83,37 @@ export class AuthService {
             refresh_token: res[1]
           })
         )
+        .catch(rej => reject(rej))
+    );
+  }
+
+  /**
+   * Method for signing out from the system
+   * @param {string} id Id of user that signs out
+   * @param {string} tokenId Id of used refresh token
+   * @param {number} exp  Expiration date of used refresh token, in seconds as per JWT standard
+   * @returns {string} The username if logging out the user was successful
+   */
+  async signOut(id: string, tokenId: string, exp: number): Promise<string> {
+    return new Promise((resolve, reject) =>
+      this.credRepository
+        .findOne({
+          where: {
+            user_id: id
+          }
+        })
+        .then(res => {
+          if (!res) throw new CouldNotLogout();
+          const now_unix = Math.floor(Date.now() / 1000);
+          return Promise.all([
+            this.usersService.logout(res.user_id),
+            this.cacheManager.set(`blacklist_token:${id}:${tokenId}`, now_unix, (exp - now_unix) * 1000)
+          ]);
+        })
+        .then(res => {
+          if (!res[0]) throw new CouldNotLogout();
+          resolve(res[0].username);
+        })
         .catch(rej => reject(rej))
     );
   }
@@ -190,12 +225,13 @@ export class AuthService {
 
   /**
    * Method for getting a new refresh token (and an access token for convenience)
-   * @param id Id of user to renew token for
-   * @param version Version of user credentials
-   * @param tokenId Id of token used for request
+   * @param {string} id Id of user to renew token for
+   * @param {number} version Version of user credentials
+   * @param {string} tokenId Id of token used for request
+   * @param {number} exp Expiration time of token
    * @returns A set of new refresh and access tokens for authentication
    */
-  async refreshTokenAccess(id: string, version: number, tokenId: string): Promise<TokenPair> {
+  async refreshTokenAccess(id: string, version: number, tokenId: string, exp: number): Promise<TokenPair> {
     await this.checkIfTokenIsBlacklisted(id, tokenId);
     return new Promise((resolve, reject) => {
       this.usersService
@@ -210,7 +246,12 @@ export class AuthService {
           };
         })
         .then(res => {
-          return Promise.all([this.generateAccessToken(res), this.generateRefreshToken(res)]);
+          const now_unix = Math.floor(Date.now() / 1000);
+          return Promise.all([
+            this.generateAccessToken(res),
+            this.generateRefreshToken(res),
+            this.cacheManager.set(`blacklist_token:${id}:${tokenId}`, now_unix, (exp - now_unix) * 1000)
+          ]);
         })
         .then(res =>
           resolve({
@@ -266,14 +307,7 @@ export class AuthService {
 
   // checks if a token given the ID of the user and ID of token exists on the database
   private async checkIfTokenIsBlacklisted(userId: string, tokenId: string): Promise<void> {
-    console.log(userId + ' ' + tokenId);
-    // const count = await this.blacklistedTokensRepository.count({
-    //   user: userId,
-    //   tokenId,
-    // });
-
-    // if (count > 0) {
-    //   throw new UnauthorizedException('Invalid token');
-    // }
+    const time = await this.cacheManager.get(`blacklist_token${userId}:${tokenId}`);
+    if (time) throw new UnauthorizedException('Invalid token');
   }
 }
