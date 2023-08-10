@@ -62,7 +62,7 @@ export class AuthController {
 
   /**
    * Endpoint for refreshing access to the system, using refresh token rotation
-   * @param {MRequest} req
+   * @param {MRequest} userInfo Refresh JWT payload
    * @param {Response} response
    * @returns New access token, and a new refresh token in an Http-only signed cookie
    */

@@ -8,6 +8,8 @@ import { UsersModule } from './user/user.module';
 import ormConfig from 'ormconfig';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 /**
  * Main App module
@@ -31,10 +33,20 @@ import { redisStore } from 'cache-manager-redis-yet';
       })
     }),
     TypeOrmModule.forRoot(ormConfig() as TypeOrmModuleOptions),
+    ThrottlerModule.forRoot({
+      ttl: parseInt(process.env.THROTTLE_TTL ?? '60', 10),
+      limit: parseInt(process.env.THROTTLE_LIMIT ?? '10', 10)
+    }),
     AuthModule,
     UsersModule
   ],
   controllers: [AppController],
-  providers: [AppService]
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard
+    },
+    AppService
+  ]
 })
 export class AppModule {}

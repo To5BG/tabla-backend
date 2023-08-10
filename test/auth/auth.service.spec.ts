@@ -28,13 +28,13 @@ describe('AuthService', () => {
             /**
              * Mock JWTService here
              */
-          }
+          };
         else if (token === CACHE_MANAGER)
           return {
             /**
              * Mock CacheManager here
              */
-          }
+          };
       })
       .compile();
 
